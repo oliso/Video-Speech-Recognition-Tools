@@ -52,9 +52,9 @@ def recog_IBM(input_file, work_dir):
     ##########################################################################
     # Set up IBM credentials (have to sign up for an IBM account):
     ##########################################################################
-    ibm_apikey = "7pbHP5MOctczpme24yLh0e4VUYl0o-C9z--Ikf4kXkaF"
+    ibm_apikey = XXXXX
     ##########################################################################
-    ibm_url = "https://api.eu-gb.speech-to-text.watson.cloud.ibm.com/instances/3632ef59-4133-478b-aa61-b97e545b22c3"
+    ibm_url = XXXXX
     ##########################################################################
 
     # Need to use IBM authenticator with apikey and url:
