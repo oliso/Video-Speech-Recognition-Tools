@@ -5,7 +5,7 @@ Transcription of speech (audio .wav) to text.
 Make sure you sign up for an IBM account and receive your API key and URL
 before trying to use the IBM option.
 Once obtained, please insert the credentials below into definitions of the
-ibm_apikey and ibm_url variables within the recog_IBM() function definition.
+ibm_apikey and ibm_url variables within the recog_ibm() function definition.
 
 @author: Oliver Osvald (email: oloosvald@gmail.com)
 """
@@ -20,16 +20,16 @@ from ibm_watson import SpeechToTextV1
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator
 
 
-def recog_google(input_file, work_dir):
+def recog_google(input_file_path):
     """Use google API to recognise speech."""
     # Set up recogniser and process audio file into audio data:
-    r = sr.Recognizer()
+    rcg = sr.Recognizer()
 
-    with sr.AudioFile(input_file+".wav") as source:
-        audio_data = r.record(source, offset=0)
+    with sr.AudioFile(input_file_path+".wav") as source:
+        audio_data = rcg.record(source, offset=0)
 
     # Call Google API (uses default api key):
-    text_google = r.recognize_google(audio_data)
+    text_google = rcg.recognize_google(audio_data)
 
     # Print results:
     try:
@@ -40,21 +40,21 @@ def recog_google(input_file, work_dir):
         print("Google Speech Recognition could not understand audio")
         raise
 
-    except sr.RequestError as e:
+    except sr.RequestError as err:
         print("Could not request results from Google Speech Recognition"
-              + " service; {0}".format(e)
+              + " service; {0}".format(err)
               )
         raise
 
 
-def recog_IBM(input_file, work_dir):
+def recog_ibm(input_file_path):
     """Use IBM API to recognise speech."""
     ##########################################################################
     # Set up IBM credentials (have to sign up for an IBM account):
     ##########################################################################
-    ibm_apikey = XXXXX
+    ibm_apikey = "INSERT API KEY HERE"
     ##########################################################################
-    ibm_url = XXXXX
+    ibm_url = "INSERT API URL HERE"
     ##########################################################################
 
     # Need to use IBM authenticator with apikey and url:
@@ -63,7 +63,7 @@ def recog_IBM(input_file, work_dir):
     speech_to_text.set_service_url(ibm_url)
 
     # Recognize step using method from speech_to_text:
-    with open(input_file + ".wav", 'rb') as source:
+    with open(input_file_path + ".wav", 'rb') as source:
         sr_results = speech_to_text.recognize(audio=source,
                                               content_type='audio/wav'
                                               ).get_result()
@@ -80,21 +80,21 @@ def recog_IBM(input_file, work_dir):
         print("IBM could not understand audio")
         raise
 
-    except sr.RequestError as e:
-        print("IBM error; {0}".format(e))
+    except sr.RequestError as err:
+        print("IBM error; {0}".format(err))
         raise
 
 
-def recog_sphinx(input_file, work_dir):
+def recog_sphinx(input_file_path):
     """Use sphinx (offline) to recognise speech."""
     # Set up recogniser and process audio file into audio data:
-    r = sr.Recognizer()
+    rcg = sr.Recognizer()
 
-    with sr.AudioFile(input_file + ".wav") as source:
-        audio_data = r.record(source, offset=0)
+    with sr.AudioFile(input_file_path + ".wav") as source:
+        audio_data = rcg.record(source, offset=0)
 
     # Call Sphinx:
-    text_sphinx = r.recognize_sphinx(audio_data)
+    text_sphinx = rcg.recognize_sphinx(audio_data)
 
     # Print results:
     try:
@@ -105,8 +105,8 @@ def recog_sphinx(input_file, work_dir):
         print("Sphinx could not understand audio")
         raise
 
-    except sr.RequestError as e:
-        print("Sphinx error; {0}".format(e))
+    except sr.RequestError as err:
+        print("Sphinx error; {0}".format(err))
         raise
 
 
@@ -141,11 +141,11 @@ def run_recognition(sr_options,
     """Combine APIs and write to file."""
     # Check if skills matching required - if yes, preload the skills list
     if skills_matching is True:
+        skills_file_path = os.path.join(work_dir, skills_matching_file)
         skills_matching_file = skills_matching_file + ".csv"
-        input_file_path = os.path.join(work_dir, skills_matching_file)
 
         try:
-            skills = pd.read_csv(input_file_path,
+            skills = pd.read_csv(skills_file_path,
                                  encoding="ISO-8859-1")
             skills = skills.values.tolist()
         except FileNotFoundError:
@@ -154,43 +154,45 @@ def run_recognition(sr_options,
 
     # Cycle through files and apply selected SR algorithm and SM:
     for input_file in input_files:
+        # Set up input file path
+        input_file_path = os.path.join(work_dir, input_file)
 
         # Amend file:
-        Transcribe = open("Transcription.txt", "a")
-        Transcribe.write("\n Transcription from file" + input_file + ":")
+        transcribe = open("Transcription.txt", "a")
+        transcribe.write("\n Transcription from file" + input_file + ":")
 
         # Use algorithms according to the sr_option:
         if "Google" in sr_options:
-            text_google = recog_google(input_file)
-            Transcribe.write("\n" + "text_from_google: " + text_google)
+            text_google = recog_google(input_file_path)
+            transcribe.write("\n" + "text_from_google: " + text_google)
 
             # Check if skill match is required:
             if skills_matching is True:
                 skills_matched = skill_match(work_dir, skills, text_google)
-                Transcribe.write("\n Google transcription contains these "
+                transcribe.write("\n Google transcription contains these "
                                  + "skills from the list: %s" % skills_matched)
 
         if "IBM" in sr_options:
-            text_ibm = recog_IBM(input_file)
-            Transcribe.write("\n" + "text_from_ibm: " + text_ibm)
+            text_ibm = recog_ibm(input_file_path)
+            transcribe.write("\n" + "text_from_ibm: " + text_ibm)
 
             # Check if skill match is required:
             if skills_matching is True:
                 skills_matched = skill_match(work_dir, skills, text_ibm)
-                Transcribe.write("\n IBM transcription contains these skills "
+                transcribe.write("\n IBM transcription contains these skills "
                                  + "from the list: %s" % skills_matched)
 
         if "Sphinx" in sr_options:
-            text_sphinx = recog_sphinx(input_file)
-            Transcribe.write("\n" + "text_from_sphinx: " + text_sphinx)
+            text_sphinx = recog_sphinx(input_file_path)
+            transcribe.write("\n" + "text_from_sphinx: " + text_sphinx)
 
             # Check if skill match is required:
             if skills_matching is True:
                 skills_matched = skill_match(work_dir, skills, text_sphinx)
-                Transcribe.write("\n Sphinx transcription contains these "
+                transcribe.write("\n Sphinx transcription contains these "
                                  + "skills from the list: %s" % skills_matched)
 
-        Transcribe.close()
+        transcribe.close()
 
 
 if __name__ == '__main__':
@@ -237,13 +239,13 @@ if __name__ == '__main__':
 
     SR_OPTIONS = ARGS.sr_options
     FILE_PATH = ARGS.file_path
-    FILE_LIST = ARGS.input_file_names
+    FILE_LIST = ARGS.input_audio_names
     SM_OPTION = ARGS.skills_match
-    SM_file = ARGS.skills_file_name
+    SM_FILE = ARGS.skills_file_name
 
-    # run_recognition(sr_options=SR_OPTIONS,
-    #                 work_dir=FILE_PATH,
-    #                 input_files=FILE_LIST,
-    #                 skills_matching=SM_OPTION,
-    #                 skills_matching_file=SM_file
-    #                 )
+    run_recognition(sr_options=SR_OPTIONS,
+                    work_dir=FILE_PATH,
+                    input_files=FILE_LIST,
+                    skills_matching=SM_OPTION,
+                    skills_matching_file=SM_FILE
+                    )
